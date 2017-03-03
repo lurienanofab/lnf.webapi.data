@@ -1,0 +1,10 @@
+.vs/
+bin/
+obj/
+packages/
+TestResults/
+*.suo
+*.user
+LNF.WebApi.Data/Web.config
+LNF.WebApi.Data/Web.Debug.config
+LNF.WebApi.Data/Web.Release.config
