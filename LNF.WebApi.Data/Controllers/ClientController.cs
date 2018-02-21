@@ -5,6 +5,8 @@ using LNF.Repository.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Web.Http;
 
 namespace LNF.WebApi.Data.Controllers
@@ -297,19 +299,45 @@ namespace LNF.WebApi.Data.Controllers
         [Route("client/remote")]
         public ClientRemoteModel PostClientRemote([FromBody] ClientRemoteModel model, [FromUri] DateTime period)
         {
-            //create a new ClientRemote
-            var clientRemote = new ClientRemote()
+            var exists = DA.Current.Query<ActiveLogClientRemote>().Any(x =>
+                x.ClientID == model.ClientID
+                && x.RemoteClientID == model.RemoteClientID
+                && x.AccountID == model.AccountID
+                && (x.EnableDate < period.AddMonths(1) && (x.DisableDate == null || x.DisableDate > period)));
+
+            if (!exists)
             {
-                Client = DA.Current.Single<Client>(model.ClientID),
-                RemoteClient = DA.Current.Single<Client>(model.RemoteClientID),
-                Account = DA.Current.Single<Account>(model.AccountID),
-                Active = true
-            };
+                var client = DA.Current.Single<Client>(model.ClientID);
+                var remoteClient = DA.Current.Single<Client>(model.RemoteClientID);
+                var account = DA.Current.Single<Account>(model.AccountID);
 
-            DA.Current.Insert(clientRemote);
-            clientRemote.Enable(period);
+                if (client == null)
+                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format("Cannot find a Client with ClientID = {0}", model.ClientID)));
 
-            return clientRemote.Model<ClientRemoteModel>();
+                if (remoteClient == null)
+                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format("Cannot find a Client with ClientID = {0}", model.RemoteClientID)));
+
+                if (account == null)
+                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format("Cannot find an Account with AccountID = {0}", model.AccountID)));
+
+                //create a new ClientRemote
+                var clientRemote = new ClientRemote()
+                {
+                    Client = client,
+                    RemoteClient = remoteClient,
+                    Account = account,
+                    Active = true
+                };
+
+                DA.Current.Insert(clientRemote);
+                clientRemote.Enable(period);
+
+                return clientRemote.Model<ClientRemoteModel>();
+            }
+            else
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict, "A duplicate record already exists."));
+            }
         }
 
         /// <summary>
