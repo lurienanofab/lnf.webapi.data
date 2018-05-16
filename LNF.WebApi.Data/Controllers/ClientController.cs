@@ -16,6 +16,9 @@ namespace LNF.WebApi.Data.Controllers
     /// </summary>
     public class ClientController : ApiController
     {
+        protected IActiveDataItemManager ActiveDataItemManager => DA.Use<IActiveDataItemManager>();
+        protected IClientRemoteManager ClientRemoteManager => DA.Use<IClientRemoteManager>();
+
         /// <summary>
         /// Gets an unfiltered list of clients
         /// </summary>
@@ -87,10 +90,9 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="username">The username value</param>
         /// <returns>A ClientModel item</returns>
         [Route("client/username/{username}")]
-        public ClientModel GetByUserName(string username)
+        public ClientItem GetByUserName(string username)
         {
-            var clientInfo = ClientInfoUtility.FindByUserName(username);
-            return clientInfo.Model<ClientModel>();
+            return ClientInfo.Find(username).GetClientItem();
         }
 
         /// <summary>
@@ -98,12 +100,12 @@ namespace LNF.WebApi.Data.Controllers
         /// </summary>
         /// <returns>A ClientModel item</returns>
         [Route("client/current")]
-        public ClientModel GetCurrent()
+        public ClientItem GetCurrent()
         {
             if (RequestContext.Principal.Identity.IsAuthenticated)
                 return GetByUserName(RequestContext.Principal.Identity.Name);
             else
-                return new ClientModel(); //return an empty object when not logged in
+                return new ClientItem(); //return an empty object when not logged in
         }
 
         /// <summary>
@@ -112,7 +114,7 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="model">The item on which this action is performed</param>
         /// <returns>The inserted Client item with ClientID set</returns>
         [Route("client")]
-        public ClientModel Post([FromBody] ClientModel model)
+        public ClientItem Post([FromBody] ClientItem model)
         {
             //create a new client
             var client = new Client()
@@ -128,7 +130,7 @@ namespace LNF.WebApi.Data.Controllers
                 DemEthnicID = model.DemEthnicID,
                 DemGenderID = model.DemGenderID,
                 DemRaceID = model.DemRaceID,
-                TechnicalFieldID = model.TechnicalFieldID,
+                TechnicalFieldID = model.TechnicalInterestID,
                 IsChecked = model.IsChecked,
                 IsSafetyTest = model.IsSafetyTest,
                 Active = true
@@ -136,10 +138,10 @@ namespace LNF.WebApi.Data.Controllers
 
             DA.Current.Insert(client);
 
-            client.Enable();
+            ActiveDataItemManager.Enable(client);
             client.ResetPassword();
 
-            return client.Model<ClientModel>();
+            return client.Model<ClientItem>();
         }
 
         /// <summary>
@@ -148,7 +150,7 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="model">The object on which this action is performed</param>
         /// <returns>True if the Client was modified, otherwise false</returns>
         [Route("client")]
-        public bool Put([FromBody] ClientModel model)
+        public bool Put([FromBody] ClientItem model)
         {
             if (model.ClientID == 0)
                 return false;
@@ -156,9 +158,9 @@ namespace LNF.WebApi.Data.Controllers
             var client = DA.Current.Single<Client>(model.ClientID);
 
             if (model.ClientActive)
-                client.Enable();
+                ActiveDataItemManager.Enable(client);
             else
-                client.Disable();
+                ActiveDataItemManager.Disable(client);
 
             client.FName = model.FName;
             client.MName = model.MName;
@@ -170,7 +172,7 @@ namespace LNF.WebApi.Data.Controllers
             client.DemEthnicID = model.DemEthnicID;
             client.DemGenderID = model.DemGenderID;
             client.DemRaceID = model.DemRaceID;
-            client.TechnicalFieldID = model.TechnicalFieldID;
+            client.TechnicalFieldID = model.TechnicalInterestID;
             client.IsChecked = model.IsChecked;
             client.IsSafetyTest = model.IsSafetyTest;
 
@@ -231,13 +233,13 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="clientId">The unique ClientID</param>
         /// <returns>A list of ClientOrgInfo items</returns>
         [Route("client/{clientId}/orgs")]
-        public IEnumerable<ClientModel> GetClientOrgs(int clientId)
+        public IEnumerable<ClientItem> GetClientOrgs(int clientId)
         {
             var query = DA.Current.Query<ClientOrgInfo>()
                 .Where(x => x.ClientID == clientId)
                 .OrderBy(x => x.EmailRank);
 
-            return query.Model<ClientModel>();
+            return query.Model<ClientItem>();
         }
 
         /// <summary>
@@ -246,13 +248,13 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="clientId">The unique ClientID</param>
         /// <returns>A list of ClientOrgInfo items</returns>
         [Route("client/{clientId}/orgs/active")]
-        public IEnumerable<ClientModel> GetActiveClientOrgs(int clientId)
+        public IEnumerable<ClientItem> GetActiveClientOrgs(int clientId)
         {
             var query = DA.Current.Query<ClientOrgInfo>()
                 .Where(x => x.ClientID == clientId && x.ClientActive && x.ClientOrgActive)
                 .OrderBy(x => x.EmailRank);
 
-            return query.Model<ClientModel>();
+            return query.Model<ClientItem>();
         }
 
         /// <summary>
@@ -263,14 +265,14 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="ed">The range end date</param>
         /// <returns>A list of ClientOrgInfo items</returns>
         [Route("client/{clientId}/org/active/range")]
-        public IEnumerable<ClientModel> GetActiveByRangeClientOrgs(int clientId, DateTime sd, DateTime ed)
+        public IEnumerable<ClientItem> GetActiveByRangeClientOrgs(int clientId, DateTime sd, DateTime ed)
         {
             var query = DA.Current.Query<ActiveLogClientOrg>()
                 .Where(x => x.ClientID == clientId && x.EnableDate < ed && (x.DisableDate == null || x.DisableDate > sd));
 
             var join = query.Join(DA.Current.Query<ClientOrgInfo>(), o => o.ClientOrgID, i => i.ClientOrgID, (outer, inner) => inner);
 
-            return join.OrderBy(x => x.EmailRank).Model<ClientModel>();
+            return join.OrderBy(x => x.EmailRank).Model<ClientItem>();
         }
 
         /// <summary>
@@ -330,7 +332,9 @@ namespace LNF.WebApi.Data.Controllers
                 };
 
                 DA.Current.Insert(clientRemote);
-                clientRemote.Enable(period);
+                ActiveDataItemManager.Enable(client);
+
+                ClientRemoteManager.Enable(clientRemote, period);
 
                 return clientRemote.Model<ClientRemoteModel>();
             }

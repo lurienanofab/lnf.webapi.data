@@ -6,10 +6,10 @@ namespace LNF.WebApi.Data.Controllers
     public class EmailController : ApiController
     {
         [Route("email")]
-        public SendMessageResult Post([FromBody] SendMessageArgs args)
+        public string Post([FromBody] SendMessageArgs args)
         {
-            var result = Providers.Email.SendMessage(args);
-            return result;
+            ServiceProvider.Current.Email.SendMessage(args);
+            return "message sent ok";
         }
     }
 }

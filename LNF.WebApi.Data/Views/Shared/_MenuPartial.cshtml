@@ -1,0 +1,67 @@
+﻿@using LNF;
+
+@model  SiteMenu
+
+<!-- Fixed navbar -->
+<div class="menu" data-time-url="//ssel-sched.eecs.umich.edu/time.aspx">
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/">
+                    <img src="//ssel-apps.eecs.umich.edu/static/images/lnfbanner.jpg" border="0" alt="logo" />
+                </a>
+                <div class="visible-xs-block navbar-brand navbar-text current-user">
+                    <div>@Model.Client.DisplayName</div>
+                    <div class="clock" data-format="h:mm:ss A, MMM D"></div>
+                </div>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    @foreach (var p in Model.Where(x => x.MenuParentID == 0))
+                    {
+                        if (p.IsLogout)
+                        {
+                            <li>
+                                <a href="@p.MenuURL">@p.MenuText</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                    @p.MenuText
+                                </a>
+                                <ul class="dropdown-menu">
+                                    @foreach (var c in Model.Where(x => x.MenuParentID == p.MenuID))
+                                    {
+                                        <li>
+                                            <a href="@c.MenuURL" target="@Model.GetTarget()">@c.MenuText</a>
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+                    }
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <div class="visible-lg-block visible-md-block navbar-text current-user">
+                            <div>Current User: @Model.Client.DisplayName</div>
+                            <div class="clock" data-format="hh:mm:ss A on dddd, MMM DD"></div>
+                        </div>
+                        <div class="visible-sm-block navbar-text current-user">
+                            <div>@Model.Client.DisplayName</div>
+                            <div class="clock" data-format="h:mm:ss A, MMM D"></div>
+                        </div>
+                    </li>
+                </ul>
+            </div><!--/.nav-collapse -->
+        </div>
+    </nav>
+</div>

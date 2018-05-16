@@ -14,29 +14,27 @@
 
     <lnf>
         <swagger title="Data API" version="v1"/>
-        <providers production="false">
-            <context type="LNF.Impl.WebContextProvider, LNF.Impl" loginUrl="/login"/>
-            <dataAccess type="LNF.Impl.NHibernateWebDataAccess, LNF.Impl"/>
-            <encryption type="LNF.Impl.EncryptionProvider, LNF.Impl"/>
-            <email type="LNF.Impl.Email.EmailProvider, LNF.Impl" host="127.0.0.1"/>
-            <log type="LNF.Impl.Logging.ServiceLogProvider, LNF.Impl" name="LNF.WebApi.Billing" enabled="true"/>
-            <modelFactory type="LNF.Impl.ModelFactory.ValueInjecterModelFactory, LNF.Impl"/>
-        </providers>
-        <redis>
-            <connection host="cachesvr" databaseId="5"/>
-        </redis>
+        <provider production="false">
+            <context loginUrl="/login" />
+            <dataAccess showSql="true" />
+            <email host="xxxxx" log="true" />
+            <control host="xxxxx" />
+            <log name="LNF.WebApi.Data" enabled="true" />
+        </provider>
     </lnf>
 
     <connectionStrings>
-        <add name="cnSselData" connectionString="*****" providerName="System.Data.SqlClient"/>
+        <add name="cnSselData" connectionString="xxxxx" providerName="System.Data.SqlClient"/>
     </connectionStrings>
 
     <appSettings>
-        <add key="ApiHost" value="*****"/>
-        <add key="BasicAuthUsername" value="*****"/>
-        <add key="BasicAuthPassword" value="*****"/>
-        <add key="ApiKey" value="*****"/>
-        <add key="MongoConnectionString" value="*****"/>
+        <add key="AppServer" value="xxxxx"/>
+        <add key="SchedServer" value="xxxxx"/>
+        <add key="ApiHost" value="xxxxx"/>
+        <add key="BasicAuthUsername" value="xxxxx"/>
+        <add key="BasicAuthPassword" value="xxxxx"/>
+        <add key="ApiKey" value="xxxxx"/>
+        <add key="MongoConnectionString" value="xxxxx"/>
         <add key="webpages:Version" value="3.0.0.0"/>
         <add key="webpages:Enabled" value="false"/>
         <add key="ClientValidationEnabled" value="true"/>

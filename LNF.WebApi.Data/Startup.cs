@@ -1,4 +1,8 @@
-﻿using Microsoft.Owin;
+﻿using LNF.Impl.DependencyInjection.Web;
+using Microsoft.Owin;
+using Owin;
+using System.Web.Mvc;
+using System.Web.Routing;
 
 [assembly: OwinStartup(typeof(LNF.WebApi.Data.Startup))]
 
@@ -7,5 +11,16 @@ namespace LNF.WebApi.Data
     /// <summary>
     /// This class must be local to the application or there is an issue with routing when IIS resets.
     /// </summary>
-    public class Startup : ApiOwinStartup { }
+    public class Startup : ApiOwinStartup
+    {
+        public override void Configuration(IAppBuilder app)
+        {
+            ServiceProvider.Current = IOC.Resolver.GetInstance<ServiceProvider>();
+
+            base.Configuration(app);
+
+            AreaRegistration.RegisterAllAreas();
+            RouteConfig.RegisterRoutes(RouteTable.Routes);
+        }
+    }
 }
