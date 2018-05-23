@@ -185,13 +185,13 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="clientId">The unique ClientID</param>
         /// <returns>A list of ClientAccountInfo items</returns>
         [Route("client/{clientId}/accounts")]
-        public IEnumerable<ClientAccountModel> GetClientAccounts(int clientId)
+        public IEnumerable<ClientAccountItem> GetClientAccounts(int clientId)
         {
             var query = DA.Current.Query<ClientAccountInfo>()
                 .Where(x => x.ClientID == clientId)
                 .OrderBy(x => x.EmailRank);
 
-            return query.Model<ClientAccountModel>();
+            return query.Model<ClientAccountItem>();
         }
 
         /// <summary>
@@ -200,13 +200,13 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="clientId">The unique ClientID</param>
         /// <returns>A list of ClientAccountInfo items</returns>
         [Route("client/{clientId}/accounts/active")]
-        public IEnumerable<ClientAccountModel> GetActiveClientAccounts(int clientId)
+        public IEnumerable<ClientAccountItem> GetActiveClientAccounts(int clientId)
         {
             var query = DA.Current.Query<ClientAccountInfo>()
                 .Where(x => x.ClientID == clientId && x.ClientActive && x.ClientOrgActive && x.ClientAccountActive)
                 .OrderBy(x => x.EmailRank);
 
-            return query.Model<ClientAccountModel>();
+            return query.Model<ClientAccountItem>();
         }
 
         /// <summary>
@@ -217,14 +217,14 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="ed">The range end date</param>
         /// <returns>A list of ClientAccountInfo items</returns>
         [Route("client/{clientId}/accounts/active/range")]
-        public IEnumerable<ClientAccountModel> GetActiveByRangeClientAccounts(int clientId, DateTime sd, DateTime ed)
+        public IEnumerable<ClientAccountItem> GetActiveByRangeClientAccounts(int clientId, DateTime sd, DateTime ed)
         {
             var query = DA.Current.Query<ActiveLogClientAccount>()
                 .Where(x => x.ClientID == clientId && x.EnableDate < ed && (x.DisableDate == null || x.DisableDate > sd));
 
             var join = query.Join(DA.Current.Query<ClientAccountInfo>(), o => o.ClientAccountID, i => i.ClientAccountID, (outer, inner) => inner);
 
-            return join.OrderBy(x => x.EmailRank).Model<ClientAccountModel>();
+            return join.OrderBy(x => x.EmailRank).Model<ClientAccountItem>();
         }
 
         /// <summary>
@@ -282,14 +282,14 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="ed">The range end date</param>
         /// <returns>A list of ClientRemoteInfo items</returns>
         [Route("client/remote/active/range")]
-        public IEnumerable<ClientRemoteModel> GetActiveClientRemotes(DateTime sd, DateTime ed)
+        public IEnumerable<ClientRemoteItem> GetActiveClientRemotes(DateTime sd, DateTime ed)
         {
             var query = DA.Current.Query<ActiveLogClientRemote>()
                 .Where(x => x.EnableDate < ed && (x.DisableDate == null || x.DisableDate > sd));
 
             var join = query.Join(DA.Current.Query<ClientRemoteInfo>(), o => o.ClientRemoteID, i => i.ClientRemoteID, (outer, inner) => inner);
 
-            return join.OrderBy(x => x.DisplayName).ThenBy(x => x.AccountName).Model<ClientRemoteModel>();
+            return join.OrderBy(x => x.DisplayName).ThenBy(x => x.AccountName).Model<ClientRemoteItem>();
         }
 
         /// <summary>
@@ -299,7 +299,7 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="period">The period during which the ClientRemote is active</param>
         /// <returns>The inserted ClientRemote item with ClientRemoteID set</returns>
         [Route("client/remote")]
-        public ClientRemoteModel PostClientRemote([FromBody] ClientRemoteModel model, [FromUri] DateTime period)
+        public ClientRemoteItem PostClientRemote([FromBody] ClientRemoteItem model, [FromUri] DateTime period)
         {
             var exists = DA.Current.Query<ActiveLogClientRemote>().Any(x =>
                 x.ClientID == model.ClientID
@@ -336,7 +336,7 @@ namespace LNF.WebApi.Data.Controllers
 
                 ClientRemoteManager.Enable(clientRemote, period);
 
-                return clientRemote.Model<ClientRemoteModel>();
+                return clientRemote.Model<ClientRemoteItem>();
             }
             else
             {

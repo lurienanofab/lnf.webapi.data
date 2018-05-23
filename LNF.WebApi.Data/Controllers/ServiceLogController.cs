@@ -23,7 +23,7 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="subject">The subject of the log entry (optional)</param>
         /// <returns></returns>
         [Route("servicelog/{id?}")]
-        public IEnumerable<ServiceLogModel> Get(int limit, int skip = 0, Guid? id = null, string service = null, string subject = null)
+        public IEnumerable<ServiceLogItem> Get(int limit, int skip = 0, Guid? id = null, string service = null, string subject = null)
         {
             if (limit > 100)
                 throw new ArgumentOutOfRangeException("The parameter 'limit' must not be greater than 100.");
@@ -35,7 +35,7 @@ namespace LNF.WebApi.Data.Controllers
                     && (id.HasValue ? x.MessageID == id.Value : true)
                 );
 
-            return query.Skip(skip).Take(limit).Model<ServiceLogModel>();
+            return query.Skip(skip).Take(limit).Model<ServiceLogItem>();
         }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="model">The item on which this action is performed</param>
         /// <returns>The inserted ServiceLog item with ServiceLogID and MessageID set</returns>
         [Route("servicelog")]
-        public ServiceLogModel Post([FromBody] ServiceLogModel model)
+        public ServiceLogItem Post([FromBody] ServiceLogItem model)
         {
             ServiceLog item = new ServiceLog()
             {
@@ -59,7 +59,7 @@ namespace LNF.WebApi.Data.Controllers
 
             DA.Current.Insert(item);
 
-            return item.Model<ServiceLogModel>();
+            return item.Model<ServiceLogItem>();
         }
 
         /// <summary>
