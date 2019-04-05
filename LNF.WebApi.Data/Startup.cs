@@ -15,7 +15,8 @@ namespace LNF.WebApi.Data
     {
         public override void Configuration(IAppBuilder app)
         {
-            ServiceProvider.Current = IOC.Resolver.GetInstance<ServiceProvider>();
+            var ioc = new IOC();
+            ServiceProvider.Current = ioc.Resolver.GetInstance<IProvider>();
 
             base.Configuration(app);
 

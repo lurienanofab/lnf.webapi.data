@@ -1,4 +1,5 @@
-﻿using LNF.Repository;
+﻿using LNF.Models.Data;
+using LNF.Repository;
 using LNF.Repository.Data;
 using System;
 using System.Collections.Generic;
@@ -88,9 +89,9 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="accountId">The id value</param>
         /// <returns>An AccountInfo item</returns>
         [Route("account/{accountId}")]
-        public AccountInfo GetByAccountID(int accountId)
+        public AccountItem GetByAccountID(int accountId)
         {
-            return DA.Current.Single<AccountInfo>(accountId);
+            return CreateAccountItems(DA.Current.Query<AccountInfo>().Where(x => x.AccountID == accountId)).FirstOrDefault();
         }
 
         /// <summary>
@@ -102,6 +103,36 @@ namespace LNF.WebApi.Data.Controllers
         public AccountInfo GetByShortCode(string shortcode)
         {
             return DA.Current.Query<AccountInfo>().FirstOrDefault(x => x.ShortCode.Trim() == shortcode.Trim());
+        }
+
+        private IEnumerable<AccountItem> CreateAccountItems(IQueryable<AccountInfo> query)
+        {
+            return query.ToList().Select(x => new AccountItem
+            {
+                AccountID = x.AccountID,
+                OrgID = x.OrgID,
+                OrgName = x.OrgName,
+                AccountTypeID = x.AccountTypeID,
+                AccountTypeName = x.AccountTypeName,
+                AccountName = x.AccountName,
+                AccountNumber = x.AccountNumber,
+                ShortCode = x.ShortCode,
+                FundingSourceID = x.FundingSourceID,
+                FundingSourceName = x.FundingSourceName,
+                TechnicalFieldID = x.TechnicalFieldID,
+                TechnicalFieldName = x.TechnicalFieldName,
+                SpecialTopicID = x.SpecialTopicID,
+                SpecialTopicName = x.SpecialTopicName,
+                BillAddressID = x.BillAddressID,
+                ShipAddressID = x.ShipAddressID,
+                InvoiceNumber = x.InvoiceNumber,
+                InvoiceLine1 = x.InvoiceLine1,
+                InvoiceLine2 = x.InvoiceLine2,
+                PoEndDate = x.PoEndDate,
+                PoInitialFunds = x.PoInitialFunds,
+                PoRemainingFunds = x.PoRemainingFunds,
+                AccountActive = x.AccountActive
+            }).ToList();
         }
     }
 }

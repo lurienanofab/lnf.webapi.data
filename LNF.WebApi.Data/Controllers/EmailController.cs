@@ -1,4 +1,4 @@
-﻿using LNF.Email;
+﻿using LNF.Models.Mail;
 using System.Web.Http;
 
 namespace LNF.WebApi.Data.Controllers
@@ -8,7 +8,7 @@ namespace LNF.WebApi.Data.Controllers
         [Route("email")]
         public string Post([FromBody] SendMessageArgs args)
         {
-            ServiceProvider.Current.Email.SendMessage(args);
+            ServiceProvider.Current.Mail.SendMessage(args);
             return "message sent ok";
         }
     }
