@@ -16,8 +16,10 @@ namespace LNF.WebApi.Data.Controllers
     /// </summary>
     public class ClientController : ApiController
     {
-        protected IActiveDataItemManager ActiveDataItemManager => ServiceProvider.Current.ActiveDataItemManager;
-        protected IClientRemoteManager ClientRemoteManager => new ClientRemoteManager(ServiceProvider.Current);
+        protected IProvider Provider => ServiceProvider.Current;
+
+        //protected IActiveDataItemManager ActiveDataItemManager => ServiceProvider.Current.ActiveDataItemManager;
+        //protected IClientRemoteManager ClientRemoteManager => new ClientRemoteManager(ServiceProvider.Current); //ServiceProvider.Current.Data.ClientRemote
 
         /// <summary>
         /// Gets an unfiltered list of clients
@@ -134,7 +136,7 @@ namespace LNF.WebApi.Data.Controllers
 
             DA.Current.Insert(client);
 
-            ActiveDataItemManager.Enable(client);
+            Provider.ActiveDataItemManager.Enable(client);
             client.ResetPassword();
 
             return client.CreateModel<IClient>();
@@ -178,9 +180,9 @@ namespace LNF.WebApi.Data.Controllers
             var client = DA.Current.Single<Client>(model.ClientID);
 
             if (model.ClientActive)
-                ActiveDataItemManager.Enable(client);
+                Provider.ActiveDataItemManager.Enable(client);
             else
-                ActiveDataItemManager.Disable(client);
+                Provider.ActiveDataItemManager.Disable(client);
 
             client.FName = model.FName;
             client.MName = model.MName;
@@ -330,9 +332,9 @@ namespace LNF.WebApi.Data.Controllers
                 };
 
                 DA.Current.Insert(clientRemote);
-                ActiveDataItemManager.Enable(client);
+                Provider.ActiveDataItemManager.Enable(client);
 
-                ClientRemoteManager.Enable(clientRemote, period);
+                Provider.Data.ClientRemote.Enable(clientRemote.ClientRemoteID, period);
 
                 return clientRemote.CreateModel<IClientRemote>();
             }

@@ -30,7 +30,7 @@
     <appSettings>
         <add key="AppServer" value="xxxxx"/>
         <add key="SchedServer" value="xxxxx"/>
-        <add key="ApiHost" value="xxxxx"/>
+        <add key="ApiBaseUrl" value="xxxxx"/>
         <add key="BasicAuthUsername" value="xxxxx"/>
         <add key="BasicAuthPassword" value="xxxxx"/>
         <add key="ApiKey" value="xxxxx"/>

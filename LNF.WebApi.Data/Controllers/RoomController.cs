@@ -9,7 +9,7 @@ namespace LNF.WebApi.Data.Controllers
         [Route("room/active")]
         public IEnumerable<IRoom> GetActiveRooms(bool? parent = null)
         {
-            return ServiceProvider.Current.Data.RoomManager.GetActiveRooms(parent);
+            return ServiceProvider.Current.Data.Room.GetActiveRooms(parent);
         }
     }
 }
