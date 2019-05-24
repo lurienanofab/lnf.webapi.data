@@ -1,12 +1,9 @@
-﻿using LNF.Data;
-using LNF.Models.Data;
+﻿using LNF.Models.Data;
 using LNF.Repository;
 using LNF.Repository.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Web.Http;
 
 namespace LNF.WebApi.Data.Controllers
@@ -28,14 +25,9 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="skip">The number of items to skip (optional)</param>
         /// <returns>A list of ClientInfo items</returns>
         [Route("client")]
-        public IEnumerable<ClientInfo> Get(int limit, int skip = 0)
+        public IEnumerable<IClient> Get(int limit, int skip = 0)
         {
-            if (limit > 100)
-                throw new ArgumentOutOfRangeException("The parameter 'limit' must not be greater than 100.");
-
-            var query = DA.Current.Query<ClientInfo>().Skip(skip).Take(limit).OrderBy(x => x.DisplayName);
-
-            return query;
+            return ServiceProvider.Current.Data.Client.GetClients(limit, skip);
         }
 
         /// <summary>
@@ -136,7 +128,7 @@ namespace LNF.WebApi.Data.Controllers
 
             DA.Current.Insert(client);
 
-            Provider.ActiveDataItemManager.Enable(client);
+            Provider.Data.ActiveLog.Enable("Client", client.ClientID);
             client.ResetPassword();
 
             return client.CreateModel<IClient>();
@@ -180,9 +172,9 @@ namespace LNF.WebApi.Data.Controllers
             var client = DA.Current.Single<Client>(model.ClientID);
 
             if (model.ClientActive)
-                Provider.ActiveDataItemManager.Enable(client);
+                Provider.Data.ActiveLog.Enable("Client", client.ClientID);
             else
-                Provider.ActiveDataItemManager.Disable(client);
+                Provider.Data.ActiveLog.Disable("Client", client.ClientID);
 
             client.FName = model.FName;
             client.MName = model.MName;
@@ -247,11 +239,7 @@ namespace LNF.WebApi.Data.Controllers
         [Route("client/{clientId}/orgs")]
         public IEnumerable<IClient> GetClientOrgs(int clientId)
         {
-            var query = DA.Current.Query<ClientOrgInfo>()
-                .Where(x => x.ClientID == clientId)
-                .OrderBy(x => x.EmailRank);
-
-            return query.CreateModels<IClient>();
+            return ServiceProvider.Current.Data.Client.GetClientOrgs(clientId);
         }
 
         /// <summary>
@@ -260,11 +248,7 @@ namespace LNF.WebApi.Data.Controllers
         [Route("client/{clientId}/orgs/active")]
         public IEnumerable<IClient> GetActiveClientOrgs(int clientId)
         {
-            var query = DA.Current.Query<ClientOrgInfo>()
-                .Where(x => x.ClientID == clientId && x.ClientActive && x.ClientOrgActive)
-                .OrderBy(x => x.EmailRank);
-
-            return query.CreateModels<IClient>();
+            return ServiceProvider.Current.Data.Client.GetActiveClientOrgs(clientId);
         }
 
         /// <summary>
@@ -273,100 +257,48 @@ namespace LNF.WebApi.Data.Controllers
         [Route("client/{clientId}/org/active/range")]
         public IEnumerable<IClient> GetActiveClientOrgsInRange(int clientId, DateTime sd, DateTime ed)
         {
-            var query = DA.Current.Query<ActiveLogClientOrg>()
-                .Where(x => x.ClientID == clientId && x.EnableDate < ed && (x.DisableDate == null || x.DisableDate > sd));
-
-            var join = query.Join(DA.Current.Query<ClientOrgInfo>(), o => o.ClientOrgID, i => i.ClientOrgID, (outer, inner) => inner);
-
-            return join.OrderBy(x => x.EmailRank).CreateModels<IClient>();
-        }
-
-        /// <summary>
-        /// Gets a list of client remote items active during a date range.
-        /// </summary>
-        [Route("client/remote/active/range")]
-        public IEnumerable<IClientRemote> GetActiveClientRemotesInRange(DateTime sd, DateTime ed)
-        {
-            var query = DA.Current.Query<ActiveLogClientRemote>()
-                .Where(x => x.EnableDate < ed && (x.DisableDate == null || x.DisableDate > sd));
-
-            var join = query.Join(DA.Current.Query<ClientRemoteInfo>(), o => o.ClientRemoteID, i => i.ClientRemoteID, (outer, inner) => inner);
-
-            return join.CreateModels<IClientRemote>().OrderBy(x => x.DisplayName).ThenBy(x => x.AccountName);
+            return ServiceProvider.Current.Data.Client.GetActiveClientOrgs(clientId, sd, ed);
         }
 
         /// <summary>
         /// Inserts a new client remote item.
         /// </summary>
-        [Route("client/remote")]
-        public IClientRemote PostClientRemote([FromBody] ClientRemoteItem model, [FromUri] DateTime period)
+        [HttpPost, Route("client/remote")]
+        public IClientRemote InsertClientRemote([FromBody] ClientRemoteItem model, DateTime period)
         {
-            var exists = DA.Current.Query<ActiveLogClientRemote>().Any(x =>
-                x.ClientID == model.ClientID
-                && x.RemoteClientID == model.RemoteClientID
-                && x.AccountID == model.AccountID
-                && (x.EnableDate < period.AddMonths(1) && (x.DisableDate == null || x.DisableDate > period)));
-
-            if (!exists)
-            {
-                var client = DA.Current.Single<Client>(model.ClientID);
-                var remoteClient = DA.Current.Single<Client>(model.RemoteClientID);
-                var account = DA.Current.Single<Account>(model.AccountID);
-
-                if (client == null)
-                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format("Cannot find a Client with ClientID = {0}", model.ClientID)));
-
-                if (remoteClient == null)
-                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format("Cannot find a Client with ClientID = {0}", model.RemoteClientID)));
-
-                if (account == null)
-                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, string.Format("Cannot find an Account with AccountID = {0}", model.AccountID)));
-
-                //create a new ClientRemote
-                var clientRemote = new ClientRemote()
-                {
-                    Client = client,
-                    RemoteClient = remoteClient,
-                    Account = account,
-                    Active = true
-                };
-
-                DA.Current.Insert(clientRemote);
-                Provider.ActiveDataItemManager.Enable(client);
-
-                Provider.Data.ClientRemote.Enable(clientRemote.ClientRemoteID, period);
-
-                return clientRemote.CreateModel<IClientRemote>();
-            }
-            else
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict, "A duplicate record already exists."));
-            }
+            ServiceProvider.Current.Data.Client.InsertClientRemote(model, period);
+            return model;
         }
 
         /// <summary>
         /// Deletes a client remote item.
         /// </summary>
         [Route("client/remote/{clientRemoteId}")]
-        public bool DeleteClientRemote(int clientRemoteId)
+        public bool DeleteClientRemote(int clientRemoteId, DateTime period)
         {
-            var cr = DA.Current.Single<ClientRemote>(clientRemoteId);
-
-            if (cr == null)
-                return false;
-
-            // All the ActiveLog records for this ClientRemote
-            var alogs = DA.Current.Query<ActiveLog>().Where(x =>
-                x.TableName == "ClientRemote"
-                && x.Record == clientRemoteId).ToList();
-
-            // Delete any ActiveLogs
-            DA.Current.Delete(alogs);
-
-            // Delete the ClientRemote
-            DA.Current.Delete(cr);
-
+            ServiceProvider.Current.Data.Client.DeleteClientRemote(clientRemoteId, period);
             return true;
+        }
+
+        /// <summary>
+        /// Gets a list of client remote items active during a date range.
+        /// </summary>
+        [Route("client/remote/active/range")]
+        public IEnumerable<IClientRemote> GetActiveClientRemotes(DateTime sd, DateTime ed)
+        {
+            return ServiceProvider.Current.Data.Client.GetActiveClientRemotes(sd, ed);
+        }
+
+        [Route("client/priv")]
+        public IEnumerable<IPriv> GetPrivs()
+        {
+            return ServiceProvider.Current.Data.Client.GetPrivs();
+        }
+
+        [Route("client/community")]
+        public IEnumerable<ICommunity> GetCommunities()
+        {
+            return ServiceProvider.Current.Data.Client.GetCommunities();
         }
     }
 }

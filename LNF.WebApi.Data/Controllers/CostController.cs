@@ -11,64 +11,21 @@ namespace LNF.WebApi.Data.Controllers
     public class CostController : ApiController
     {
         [Route("cost")]
-        public IEnumerable<CostItem> Get(int limit, int skip = 0)
+        public IEnumerable<ICost> Get(int limit, int skip = 0)
         {
-            if (limit > 100)
-                throw new ArgumentOutOfRangeException("The parameter 'limit' must not be greater than 100.");
-
-            var query = DA.Current.Query<Cost>().Skip(skip).Take(limit).OrderBy(x => x.TableNameOrDescription).ThenBy(x => x.RecordID).ThenBy(x => x.ChargeTypeID);
-
-            var result = CreateCostItems(query);
-
-            return result;
+            return ServiceProvider.Current.Data.Cost.GetCosts(limit, skip);
         }
 
         [Route("cost/{costId}")]
-        public CostItem Get(int costId)
+        public ICost Get(int costId)
         {
-            var query = DA.Current.Query<Cost>().Where(x => x.CostID == costId);
-            var result = CreateCostItems(query);
-            return result.FirstOrDefault();
+            return ServiceProvider.Current.Data.Cost.GetCost(costId);
         }
 
         [Route("cost/resource/{resourceId}")]
-        public IEnumerable<CostItem> GetResourceCosts(int resourceId, DateTime? cutoff = null, int chargeTypeId = 0)
+        public IEnumerable<ICost> GetResourceCosts(int resourceId, DateTime? cutoff = null, int chargeTypeId = 0)
         {
-            string[] tables = new[] { "ToolCost", "ToolOvertimeCost" };
-            var result = GetEffectiveCosts(tables, cutoff, resourceId, chargeTypeId).ToList();
-            return result;
-        }
-
-        private IList<CostItem> GetEffectiveCosts(string[] tables, DateTime? cutoff, int recordId, int chargeTypeId)
-        {
-            var query = DA.Current.Query<Cost>().Where(x =>
-                tables.Contains(x.TableNameOrDescription)
-                && (cutoff == null || x.EffDate < cutoff)
-                && (chargeTypeId == 0 || x.ChargeTypeID == chargeTypeId)
-                && (recordId == 0 || x.RecordID == recordId || x.RecordID == null || x.RecordID == 0));
-
-            var items = CreateCostItems(query);
-
-            var agg = items
-                .GroupBy(x => new { x.ChargeTypeID, x.TableNameOrDescription, x.RecordID })
-                .Select(g => new
-                {
-                    g.Key.ChargeTypeID,
-                    g.Key.TableNameOrDescription,
-                    g.Key.RecordID,
-                    EffDate = g.Max(m => m.EffDate)
-                });
-
-            var result = items.Join(agg,
-                    o => new { o.ChargeTypeID, o.TableNameOrDescription, o.RecordID, o.EffDate },
-                    i => new { i.ChargeTypeID, i.TableNameOrDescription, i.RecordID, i.EffDate },
-                    (o, i) => o)
-                .OrderBy(x => x.TableNameOrDescription)
-                .ThenBy(x => x.RecordID)
-                .ThenBy(x => x.ChargeTypeID)
-                .ThenBy(x => x.EffDate);
-
-            return result.ToList();
+            return ServiceProvider.Current.Data.Cost.FindToolCosts(resourceId, cutoff, chargeTypeId);
         }
 
         private IEnumerable<CostItem> CreateCostItems(IQueryable<Cost> query)

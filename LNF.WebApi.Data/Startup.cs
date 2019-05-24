@@ -1,4 +1,5 @@
-﻿using LNF.Impl.DependencyInjection.Web;
+﻿using LNF.Impl.Context;
+using LNF.Impl.DependencyInjection.Web;
 using Microsoft.Owin;
 using Owin;
 using System.Web.Mvc;
@@ -15,7 +16,8 @@ namespace LNF.WebApi.Data
     {
         public override void Configuration(IAppBuilder app)
         {
-            var ioc = new IOC();
+            var ctx = new WebContext(new WebContextFactory());
+            var ioc = new IOC(ctx);
             ServiceProvider.Current = ioc.Resolver.GetInstance<IProvider>();
 
             base.Configuration(app);

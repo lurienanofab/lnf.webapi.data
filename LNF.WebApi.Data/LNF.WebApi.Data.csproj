@@ -156,6 +156,7 @@
     <Compile Include="Controllers\ClientController.cs" />
     <Compile Include="Controllers\CostController.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
+    <Compile Include="Controllers\DryBoxController.cs" />
     <Compile Include="Controllers\EmailController.cs" />
     <Compile Include="Controllers\RoomController.cs" />
     <Compile Include="Controllers\ServiceLogController.cs" />

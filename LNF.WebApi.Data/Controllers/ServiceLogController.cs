@@ -1,9 +1,6 @@
 ﻿using LNF.Models.Data;
-using LNF.Repository;
-using LNF.Repository.Data;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Web.Http;
 
 namespace LNF.WebApi.Data.Controllers
@@ -25,17 +22,7 @@ namespace LNF.WebApi.Data.Controllers
         [Route("servicelog/{id?}")]
         public IEnumerable<IServiceLog> Get(int limit, int skip = 0, Guid? id = null, string service = null, string subject = null)
         {
-            if (limit > 100)
-                throw new ArgumentOutOfRangeException("The parameter 'limit' must not be greater than 100.");
-
-            var query = DA.Current.Query<ServiceLog>()
-                .Where(x =>
-                    (service != null ? x.ServiceName == service : true)
-                    && (subject != null ? x.LogSubject == subject : true)
-                    && (id.HasValue ? x.MessageID == id.Value : true)
-                );
-
-            return query.Skip(skip).Take(limit).CreateModels<IServiceLog>();
+            return ServiceProvider.Current.Data.ServiceLog.GetServiceLogs(limit, 0, id, service, subject);
         }
 
         /// <summary>
@@ -46,20 +33,8 @@ namespace LNF.WebApi.Data.Controllers
         [Route("servicelog")]
         public IServiceLog Post([FromBody] ServiceLogItem model)
         {
-            ServiceLog item = new ServiceLog()
-            {
-                ServiceName = model.ServiceName,
-                LogDateTime = model.LogDateTime,
-                LogSubject = model.LogSubject,
-                LogLevel = model.LogLevel,
-                LogMessage = model.LogMessage,
-                MessageID = model.MessageID,
-                Data = model.Data
-            };
-
-            DA.Current.Insert(item);
-
-            return item.CreateModel<IServiceLog>();
+            ServiceProvider.Current.Data.ServiceLog.InsertServiceLog(model);
+            return model;
         }
 
         /// <summary>
@@ -71,17 +46,7 @@ namespace LNF.WebApi.Data.Controllers
         [HttpPut, Route("servicelog/{id}")]
         public bool AppendData([FromUri] Guid id, [FromBody] string data)
         {
-            ServiceLog serviceLog = DA.Current.Query<ServiceLog>().FirstOrDefault(x => x.MessageID == id);
-
-            if (serviceLog != null)
-            {
-                serviceLog.AppendData(data);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return ServiceProvider.Current.Data.ServiceLog.UpdateServiceLog(id, data);
         }
     }
 }

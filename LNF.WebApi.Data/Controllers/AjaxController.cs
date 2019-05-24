@@ -1,34 +1,34 @@
 ﻿using LNF.Models.Data;
-using LNF.Repository;
-using LNF.Repository.Data;
-using System.Linq;
 using System.Web.Mvc;
 
 namespace LNF.WebApi.Data.Controllers
 {
     public class AjaxController : Controller
     {
-        [Web.Mvc.BasicAuthentication, Route("ajax/menu")]
+        [HttpGet, Web.Mvc.BasicAuthentication, Route("ajax/menu")]
         public ActionResult Menu(int clientId = 0, string username = null, string target = null)
+        {
+            var client = GetClient(clientId, username);
+            var menu = new SiteMenu(client, target);
+            return PartialView("_MenuPartial", menu);
+        }
+
+        private IClient GetClient(int clientId, string username)
         {
             IClient client;
             
             if (!string.IsNullOrEmpty(username))
-            {
-                client = DA.Current.Query<ClientInfo>().FirstOrDefault(x => x.UserName == username).CreateModel<IClient>();
-
-                if (client == null)
-                    throw new ItemNotFoundException<ClientInfo, string>(x => x.UserName, username);
+            { 
+                client = ServiceProvider.Current.Data.Client.GetClient(username);
+                if (client == null) throw new ItemNotFoundException("Client", $"UserName = {username}");
             }
             else
             {
-                client = DA.Current.Single<ClientInfo>(clientId).CreateModel<IClient>();
-
-                if (client == null)
-                    throw new ItemNotFoundException<ClientInfo>(x => x.ClientID, clientId);
+                client = ServiceProvider.Current.Data.Client.GetClient(clientId);
+                if (client == null) throw new ItemNotFoundException("Client", $"ClientID = {clientId}");
             }
 
-            return PartialView("_MenuPartial", new SiteMenu(client, target));
+            return client;
         }
     }
 }
