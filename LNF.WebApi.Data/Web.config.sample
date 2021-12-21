@@ -28,6 +28,7 @@
     </connectionStrings>
 
     <appSettings>
+        <add key="SecurePath" value="xxxxx"/>
         <add key="AppServer" value="xxxxx"/>
         <add key="SchedServer" value="xxxxx"/>
         <add key="ApiBaseUrl" value="xxxxx"/>

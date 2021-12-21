@@ -1,4 +1,4 @@
-﻿using LNF.Models.Mail;
+﻿using LNF.Mail;
 using System.Web.Http;
 
 namespace LNF.WebApi.Data.Controllers

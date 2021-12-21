@@ -1,9 +1,9 @@
-﻿using LNF.WebApi.Data.Models;
-using MongoDB.Bson;
-using MongoDB.Driver;
+﻿using LNF.Mongo;
+using LNF.WebApi.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Web.Http;
 
@@ -11,62 +11,58 @@ namespace LNF.WebApi.Data.Controllers
 {
     public class AlertController : ApiController
     {
-        private IMongoCollection<Alert> _col;
+        private Collection<Alert> _col;
 
-        [Route("alert")]
-        public async Task<IEnumerable<Alert>> Get(DateTime? date = null)
+        [HttpGet, Route("alert")]
+        public async Task<IEnumerable<Alert>> GetByDate(DateTime? date = null)
         {
-            var cursor = await GetCollection().FindAsync(x => x.StartDate <= date.GetValueOrDefault(DateTime.Now) && x.EndDate > date.GetValueOrDefault(DateTime.Now));
-            var result = await cursor.ToListAsync();
+            var result = await GetCollection().FindAsync(x => x.StartDate <= date.GetValueOrDefault(DateTime.Now) && x.EndDate > date.GetValueOrDefault(DateTime.Now));
             return result;
         }
 
-        [Route("alert/all")]
+        [HttpGet, Route("alert/all")]
         public async Task<IEnumerable<Alert>> GetActive()
         {
-            var cursor = await GetCollection().FindAsync(FilterDefinition<Alert>.Empty);
-            var result = await cursor.ToListAsync();
+            var result = await GetCollection().AllAsync();
             return result;
         }
 
-        [Route("alert/{id}")]
-        public async Task<Alert> Get(string id)
+        [HttpGet, Route("alert/{id}")]
+        public async Task<Alert> GetById([FromUri] string id)
         {
-            var cursor = await GetCollection().FindAsync(x => x.Id == ObjectId.Parse(id));
-            var result = await cursor.FirstOrDefaultAsync();
+            var list = await GetCollection().FindAsync(x => x.Id == id);
+            var result = list.FirstOrDefault();
             return result;
         }
 
-        [Route("alert")]
+        [HttpPost, Route("alert")]
         public async Task<Alert> Post([FromBody] Alert alert)
         {
             await GetCollection().InsertOneAsync(alert);
             return alert;
         }
 
-        [Route("alert/{id}")]
+        [HttpDelete, Route("alert/{id}")]
         public async Task<long> Delete(string id)
         {
-            var deleteResult = await GetCollection().DeleteOneAsync(x => x.Id == ObjectId.Parse(id));
-            return deleteResult.DeletedCount;
-        }
-
-        [Route("alert/{id}")]
-        public async Task<Alert> Put([FromBody] Alert alert, string id)
-        {
-            var opts = new FindOneAndReplaceOptions<Alert>() { ReturnDocument = ReturnDocument.After };
-            alert.Id = ObjectId.Parse(id);
-            var result = await GetCollection().FindOneAndReplaceAsync<Alert>(x => x.Id == alert.Id, alert, opts);
+            var result = await GetCollection().DeleteOneAsync(x => x.Id == id);
             return result;
         }
 
-        private IMongoCollection<Alert> GetCollection()
+        [HttpPut, Route("alert/{id}")]
+        public async Task<Alert> Put([FromBody] Alert alert, string id)
+        {
+            var result = await GetCollection().FindOneAndReplaceAsync(x => x.Id == id, alert, true, false);
+            return result;
+        }
+
+        private Collection<Alert> GetCollection()
         {
             if (_col == null)
             {
-                var client = new MongoClient(ConfigurationManager.AppSettings["MongoConnectionString"]);
-                var db = client.GetDatabase("alerts");
-                _col = db.GetCollection<Alert>("alerts");
+                var client = new Mongo.Repository(ConfigurationManager.AppSettings["MongoConnectionString"]);
+                var db = client.Database("alerts");
+                _col = db.Collection<Alert>("alerts");
             }
 
             return _col;

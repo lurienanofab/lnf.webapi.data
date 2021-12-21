@@ -1,14 +1,12 @@
-﻿using System.Web.Mvc;
-using System.Web.Routing;
-
-namespace LNF.WebApi.Data
+﻿namespace LNF.WebApi.Data
 {
     public class MvcApplication : System.Web.HttpApplication
     {
         protected void Application_Start()
         {
-            AreaRegistration.RegisterAllAreas();
-            RouteConfig.RegisterRoutes(RouteTable.Routes);
+            // This happens in Startup...
+            //AreaRegistration.RegisterAllAreas();
+            //RouteConfig.RegisterRoutes(RouteTable.Routes);
         }
     }
 }

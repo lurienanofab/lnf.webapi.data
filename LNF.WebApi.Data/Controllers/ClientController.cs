@@ -1,6 +1,7 @@
-﻿using LNF.Models.Data;
+﻿using LNF.Data;
+using LNF.Impl;
+using LNF.Impl.Repository.Data;
 using LNF.Repository;
-using LNF.Repository.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,12 +12,15 @@ namespace LNF.WebApi.Data.Controllers
     /// <summary>
     /// Resource for working with Client and ClientInfo items
     /// </summary>
-    public class ClientController : ApiController
+    public class ClientController : ApiControllerBase
     {
-        protected IProvider Provider => ServiceProvider.Current;
+        public ClientController(IProvider provider) : base(provider) { }
 
-        //protected IActiveDataItemManager ActiveDataItemManager => ServiceProvider.Current.ActiveDataItemManager;
-        //protected IClientRemoteManager ClientRemoteManager => new ClientRemoteManager(ServiceProvider.Current); //ServiceProvider.Current.Data.ClientRemote
+        [HttpGet, Route("client/list")]
+        public IEnumerable<ClientListItem> GetClients()
+        {
+            return Provider.Data.Client.GetClients();
+        }
 
         /// <summary>
         /// Gets an unfiltered list of clients
@@ -24,40 +28,44 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="limit">The number of items to return (max 100)</param>
         /// <param name="skip">The number of items to skip (optional)</param>
         /// <returns>A list of ClientInfo items</returns>
-        [Route("client")]
-        public IEnumerable<IClient> Get(int limit, int skip = 0)
+        [HttpGet, Route("client")]
+        public IEnumerable<ClientItem> Get(int limit, int skip = 0)
         {
-            return ServiceProvider.Current.Data.Client.GetClients(limit, skip);
+            return Provider.Data.Client.GetClients(limit, skip).Select(CreateClientItem).ToList();
         }
 
         /// <summary>
         /// Gets currently active clients, and optionaly with the specified privilege.
         /// </summary>
-        [Route("client/active")]
-        public IEnumerable<IClient> GetActive(int privs = 0)
+        [HttpGet, Route("client/active")]
+        public IEnumerable<ClientItem> GetActive(int privs = 0)
         {
-            var query = DA.Current.Query<ClientInfo>().Where(x => x.ClientActive).OrderBy(x => x.DisplayName);
+            var query = DataSession.Query<ClientInfo>().Where(x => x.ClientActive).OrderBy(x => x.DisplayName);
 
             if (privs == 0)
-                return query.CreateModels<IClient>();
+                return query.Select(CreateClientItem).ToList();
             else
-                return query.Where(x => (x.Privs & (ClientPrivilege)privs) > 0).CreateModels<IClient>();
+                return query.Where(x => (x.Privs & (ClientPrivilege)privs) > 0).Select(CreateClientItem).ToList();
         }
 
         /// <summary>
         /// Gets the currently logged in user based on FormsAuthentication.
         /// </summary>
-        [Route("client/current")]
-        public IClient GetCurrent()
+        [HttpGet, Route("client/current")]
+        [AllowAnonymous]
+        public ClientItem GetCurrent()
         {
             // this endpoint is used by the scheduler when displaying helpdesk tickets - do not delete!
 
-            IClient result = null;
+            // this is needed because AllowAnonymous means the ApiAuthenticationAttribute (configured in Startup) won't be used
+            var handler = new FormsAuthHandler();
+            var authenticated = handler.Authenticate(ActionContext);
 
-            if (RequestContext.Principal.Identity.IsAuthenticated)
-                result = DA.Current.Query<ClientInfo>().Where(x => x.UserName == RequestContext.Principal.Identity.Name).CreateModels<IClient>().FirstOrDefault();
+            ClientItem result = null;
 
-            if (result == null)
+            if (authenticated && RequestContext.Principal.Identity.IsAuthenticated)
+                result = CreateClientItem(DataSession.Query<ClientInfo>().FirstOrDefault(x => x.UserName == RequestContext.Principal.Identity.Name));
+            else
                 result = new ClientItem(); //return an empty object when not logged in
 
             return result;
@@ -66,45 +74,45 @@ namespace LNF.WebApi.Data.Controllers
         /// <summary>
         /// Gets all clients active during a date range, and optionaly with the specified privilege.
         /// </summary>
-        [Route("client/active/range")]
-        public IEnumerable<IClient> GetActiveInRange(DateTime sd, DateTime ed, int privs = 0)
+        [HttpGet, Route("client/active/range")]
+        public IEnumerable<ClientItem> GetActiveInRange(DateTime sd, DateTime ed, int privs = 0)
         {
-            var query = DA.Current.Query<ActiveLogClient>()
+            var query = DataSession.Query<ActiveLogClient>()
                 .Where(x => x.EnableDate < ed && (x.DisableDate == null || x.DisableDate > sd));
 
-            var join = query.Join(DA.Current.Query<ClientInfo>(), o => o.ClientID, i => i.ClientID, (outer, inner) => inner);
+            var join = query.Join(DataSession.Query<ClientInfo>(), o => o.ClientID, i => i.ClientID, (outer, inner) => inner);
 
             if (privs == 0)
-                return join.CreateModels<IClient>().OrderBy(x => x.DisplayName);
+                return join.OrderBy(x => x.DisplayName).Select(CreateClientItem).ToList();
             else
-                return join.Where(x => (x.Privs & (ClientPrivilege)privs) > 0).CreateModels<IClient>().OrderBy(x => x.DisplayName);
+                return join.Where(x => (x.Privs & (ClientPrivilege)privs) > 0).OrderBy(x => x.DisplayName).Select(CreateClientItem).ToList();
         }
 
         /// <summary>
         /// Gets a single client item using a unique id.
         /// </summary>
-        [Route("client")]
-        public IClient GetClient(int clientId)
+        [HttpGet, Route("client/id/{clientId}")]
+        public ClientItem GetClientById(int clientId)
         {
-            var client = DA.Current.Query<ClientInfo>().FirstOrDefault(x => x.ClientID == clientId);
-            return client.CreateModel<IClient>();
+            var client = CreateClientItem(DataSession.Query<ClientInfo>().FirstOrDefault(x => x.ClientID == clientId));
+            return client;
         }
 
         /// <summary>
         /// Gets a single client item using a unique username.
         /// </summary>
-        [Route("client")]
-        public IClient GetClient(string username)
+        [HttpGet, Route("client/username/{username}")]
+        public ClientItem GetClientByUsername(string username)
         {
-            var client = DA.Current.Query<ClientInfo>().FirstOrDefault(x => x.UserName == username);
-            return client.CreateModel<IClient>();
+            var client = CreateClientItem(DataSession.Query<ClientInfo>().FirstOrDefault(x => x.UserName == username));
+            return client;
         }
 
         /// <summary>
         /// Inserts a new Client.
         /// </summary>
-        [Route("client")]
-        public IClient Post([FromBody] ClientItem model)
+        [HttpPost, Route("client")]
+        public ClientItem Post([FromBody] ClientItem model)
         {
             //create a new client
             var client = new Client()
@@ -113,80 +121,53 @@ namespace LNF.WebApi.Data.Controllers
                 FName = model.FName,
                 MName = model.MName,
                 LName = model.LName,
-                DemCitizenID = model.DemCitizenID,
-                DemGenderID = model.DemGenderID,
-                DemRaceID = model.DemRaceID,
-                DemEthnicID = model.DemEthnicID,
-                DemDisabilityID = model.DemDisabilityID,
                 Privs = model.Privs,
                 Communities = model.Communities,
-                TechnicalFieldID = model.TechnicalInterestID,
+                TechnicalInterestID = model.TechnicalInterestID,
                 IsChecked = model.IsChecked,
                 IsSafetyTest = model.IsSafetyTest,
                 Active = true
             };
 
-            DA.Current.Insert(client);
+            DataSession.Insert(client);
 
-            Provider.Data.ActiveLog.Enable("Client", client.ClientID);
+            Provider.Data.ActiveLog.Enable(client);
             client.ResetPassword();
 
-            return client.CreateModel<IClient>();
+            var c = client.CreateModel<IClient>();
+            var result = CreateClientItem(c);
+
+            return result;
         }
 
-        [Route("client/{clientId}/demographics")]
-        public LNF.Models.Data.ClientDemographics GetClientDemographics(int clientId)
+        [HttpGet, Route("client/{clientId}/demographics")]
+        public ClientDemographics GetClientDemographics(int clientId)
         {
-            var c = DA.Current.Single<ClientInfo>(clientId);
-
-            if (c == null) return null;
-
-            return new LNF.Models.Data.ClientDemographics
-            {
-                ClientID = c.ClientID,
-                UserName = c.UserName,
-                LName = c.LName,
-                FName = c.FName,
-                DemCitizenID = c.DemCitizenID,
-                DemCitizenName = c.DemCitizenName,
-                DemGenderID = c.DemGenderID,
-                DemGenderName = c.DemGenderName,
-                DemRaceID = c.DemRaceID,
-                DemRaceName = c.DemRaceName,
-                DemEthnicID = c.DemEthnicID,
-                DemEthnicName = c.DemEthnicName,
-                DemDisabilityID = c.DemDisabilityID,
-                DemDisabilityName = c.DemDisabilityName
-            };
+            return Provider.Data.Client.GetClientDemographics(clientId);
         }
 
         /// <summary>
         /// Updates an existing Client.
         /// </summary>
-        [Route("client")]
+        [HttpPut, Route("client")]
         public bool Put([FromBody] ClientItem model)
         {
             if (model.ClientID == 0)
                 return false;
 
-            var client = DA.Current.Single<Client>(model.ClientID);
+            var client = DataSession.Single<Client>(model.ClientID);
 
             if (model.ClientActive)
-                Provider.Data.ActiveLog.Enable("Client", client.ClientID);
+                Provider.Data.ActiveLog.Enable(client);
             else
-                Provider.Data.ActiveLog.Disable("Client", client.ClientID);
+                Provider.Data.ActiveLog.Disable(client);
 
             client.FName = model.FName;
             client.MName = model.MName;
             client.LName = model.LName;
             client.Privs = model.Privs;
             client.Communities = model.Communities;
-            client.DemCitizenID = model.DemCitizenID;
-            client.DemDisabilityID = model.DemCitizenID;
-            client.DemEthnicID = model.DemEthnicID;
-            client.DemGenderID = model.DemGenderID;
-            client.DemRaceID = model.DemRaceID;
-            client.TechnicalFieldID = model.TechnicalInterestID;
+            client.TechnicalInterestID = model.TechnicalInterestID;
             client.IsChecked = model.IsChecked;
             client.IsSafetyTest = model.IsSafetyTest;
 
@@ -196,68 +177,68 @@ namespace LNF.WebApi.Data.Controllers
         /// <summary>
         /// Gets a list of accounts assigned to the specified client.
         /// </summary>
-        [Route("client/{clientId}/accounts")]
+        [HttpGet, Route("client/{clientId}/accounts")]
         public IEnumerable<IClientAccount> GetClientAccounts(int clientId)
         {
-            var query = DA.Current.Query<ClientAccountInfo>()
+            var query = DataSession.Query<ClientAccountInfo>()
                 .Where(x => x.ClientID == clientId)
                 .OrderBy(x => x.EmailRank);
 
-            return query.CreateModels<IClientAccount>();
+            return query.ToList();
         }
 
         /// <summary>
         /// Gets currently active accounts assigned to the specified client.
         /// </summary>
-        [Route("client/{clientId}/accounts/active")]
+        [HttpGet, Route("client/{clientId}/accounts/active")]
         public IEnumerable<IClientAccount> GetActiveClientAccounts(int clientId)
         {
-            var query = DA.Current.Query<ClientAccountInfo>()
+            var query = DataSession.Query<ClientAccountInfo>()
                 .Where(x => x.ClientID == clientId && x.ClientActive && x.ClientOrgActive && x.ClientAccountActive)
                 .OrderBy(x => x.EmailRank);
 
-            return query.CreateModels<IClientAccount>();
+            return query.ToList();
         }
 
         /// <summary>
         /// Gets all accounts assigned to the specified client and active during the specified date range.
         /// </summary>
-        [Route("client/{clientId}/accounts/active/range")]
+        [HttpGet, Route("client/{clientId}/accounts/active/range")]
         public IEnumerable<IClientAccount> GetActiveClientAccountsInRange(int clientId, DateTime sd, DateTime ed)
         {
-            var query = DA.Current.Query<ActiveLogClientAccount>()
+            var query = DataSession.Query<ActiveLogClientAccount>()
                 .Where(x => x.ClientID == clientId && x.EnableDate < ed && (x.DisableDate == null || x.DisableDate > sd));
 
-            var join = query.Join(DA.Current.Query<ClientAccountInfo>(), o => o.ClientAccountID, i => i.ClientAccountID, (outer, inner) => inner);
+            var join = query.Join(DataSession.Query<ClientAccountInfo>(), o => o.ClientAccountID, i => i.ClientAccountID, (outer, inner) => inner);
 
-            return join.OrderBy(x => x.EmailRank).CreateModels<IClientAccount>();
+            return join.OrderBy(x => x.EmailRank).ToList();
         }
 
         /// <summary>
         /// Gets a list of client orgs assigned to the specified client.
         /// </summary>
-        [Route("client/{clientId}/orgs")]
-        public IEnumerable<IClient> GetClientOrgs(int clientId)
+        [HttpGet, Route("client/{clientId}/orgs")]
+        public IEnumerable<ClientItem> GetClientOrgs(int clientId)
         {
-            return ServiceProvider.Current.Data.Client.GetClientOrgs(clientId);
+            return Provider.Data.Client.GetClientOrgs(clientId).Select(CreateClientItem).ToList();
         }
 
         /// <summary>
         /// Gets currently active orgs assigned to the specified client.
         /// </summary>
-        [Route("client/{clientId}/orgs/active")]
-        public IEnumerable<IClient> GetActiveClientOrgs(int clientId)
+        [HttpGet, Route("client/{clientId}/orgs/active")]
+        public IEnumerable<ClientItem> GetActiveClientOrgs(int clientId)
         {
-            return ServiceProvider.Current.Data.Client.GetActiveClientOrgs(clientId);
+            return Provider.Data.Client.GetActiveClientOrgs(clientId).Select(CreateClientItem).ToList();
         }
 
         /// <summary>
         /// Gets all orgs assigned to the specified client and active during the specified date range.
         /// </summary>
-        [Route("client/{clientId}/org/active/range")]
-        public IEnumerable<IClient> GetActiveClientOrgsInRange(int clientId, DateTime sd, DateTime ed)
+        [HttpGet, Route("client/{clientId}/org/active/range")]
+        public IEnumerable<ClientItem> GetActiveClientOrgsInRange(int clientId, DateTime sd, DateTime ed)
         {
-            return ServiceProvider.Current.Data.Client.GetActiveClientOrgs(clientId, sd, ed);
+            return Provider.Data.Client.GetActiveClientOrgs(clientId, sd, ed).Select(CreateClientItem).ToList();
         }
 
         /// <summary>
@@ -266,39 +247,95 @@ namespace LNF.WebApi.Data.Controllers
         [HttpPost, Route("client/remote")]
         public IClientRemote InsertClientRemote([FromBody] ClientRemoteItem model, DateTime period)
         {
-            ServiceProvider.Current.Data.Client.InsertClientRemote(model, period);
+            Provider.Data.Client.InsertClientRemote(model, period);
             return model;
         }
 
         /// <summary>
         /// Deletes a client remote item.
         /// </summary>
-        [Route("client/remote/{clientRemoteId}")]
+        [HttpDelete, Route("client/remote/{clientRemoteId}")]
         public bool DeleteClientRemote(int clientRemoteId, DateTime period)
         {
-            ServiceProvider.Current.Data.Client.DeleteClientRemote(clientRemoteId, period);
+            Provider.Data.Client.DeleteClientRemote(clientRemoteId, period);
             return true;
         }
 
         /// <summary>
         /// Gets a list of client remote items active during a date range.
         /// </summary>
-        [Route("client/remote/active/range")]
+        [HttpGet, Route("client/remote/active/range")]
         public IEnumerable<IClientRemote> GetActiveClientRemotes(DateTime sd, DateTime ed)
         {
-            return ServiceProvider.Current.Data.Client.GetActiveClientRemotes(sd, ed);
+            return Provider.Data.Client.GetActiveClientRemotes(sd, ed);
         }
 
-        [Route("client/priv")]
+        [HttpGet, Route("client/priv")]
         public IEnumerable<IPriv> GetPrivs()
         {
-            return ServiceProvider.Current.Data.Client.GetPrivs();
+            return Provider.Data.Client.GetPrivs();
         }
 
-        [Route("client/community")]
+        [HttpGet, Route("client/community")]
         public IEnumerable<ICommunity> GetCommunities()
         {
-            return ServiceProvider.Current.Data.Client.GetCommunities();
+            return Provider.Data.Client.GetCommunities();
         }
+
+        [HttpGet, Route("client/manager/active/list")]
+        public IEnumerable<GenericListItem> AllActiveManagers()
+        {
+            return Provider.Data.Client.AllActiveManagers();
+        }
+
+        private ClientItem CreateClientItem(IClient x)
+        {
+            return new ClientItem
+            {
+                ClientID = x.ClientID,
+                UserName = x.UserName,
+                FName = x.FName,
+                MName = x.MName,
+                LName = x.LName,
+                Privs = x.Privs,
+                Communities = x.Communities,
+                IsChecked = x.IsChecked,
+                IsSafetyTest = x.IsSafetyTest,
+                RequirePasswordReset = x.RequirePasswordReset,
+                ClientActive = x.ClientActive,
+                TechnicalInterestID = x.TechnicalInterestID,
+                TechnicalInterestName = x.TechnicalInterestName,
+                ClientOrgID = x.ClientOrgID,
+                Phone = x.Phone,
+                Email = x.Email,
+                IsManager = x.IsManager,
+                IsFinManager = x.IsFinManager,
+                SubsidyStartDate = x.SubsidyStartDate,
+                NewFacultyStartDate = x.NewFacultyStartDate,
+                ClientAddressID = x.ClientAddressID,
+                ClientOrgActive = x.ClientOrgActive,
+                DepartmentID = x.DepartmentID,
+                DepartmentName = x.DepartmentName,
+                RoleID = x.RoleID,
+                RoleName = x.RoleName,
+                MaxChargeTypeID = x.MaxChargeTypeID,
+                MaxChargeTypeName = x.MaxChargeTypeName,
+                EmailRank = x.EmailRank,
+                ChargeTypeAccountID = x.ChargeTypeAccountID,
+                ChargeTypeID = x.ChargeTypeID,
+                ChargeTypeName = x.ChargeTypeName,
+                DefBillAddressID = x.DefBillAddressID,
+                DefClientAddressID = x.DefClientAddressID,
+                DefShipAddressID = x.DefShipAddressID,
+                NNINOrg = x.NNINOrg,
+                OrgActive = x.OrgActive,
+                OrgID = x.OrgID,
+                OrgName = x.OrgName,
+                OrgTypeID = x.OrgTypeID,
+                OrgTypeName = x.OrgTypeName,
+                PrimaryOrg = x.PrimaryOrg
+            };
+        }
+
     }
 }

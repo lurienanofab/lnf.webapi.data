@@ -23,12 +23,12 @@
             </div>
             <div id="navbar" class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
-                    @foreach (var p in Model.Where(x => x.MenuParentID == 0))
+                    @foreach (var p in Model.Where(x => x.MenuParentID == 0 && x.IsVisible(Model.Client)))
                     {
                         if (p.IsLogout)
                         {
                             <li>
-                                <a href="@p.MenuURL">@p.MenuText</a>
+                                <a href="@p.MenuURL" target="_top">@p.MenuText</a>
                             </li>
                         }
                         else
@@ -38,10 +38,10 @@
                                     @p.MenuText
                                 </a>
                                 <ul class="dropdown-menu">
-                                    @foreach (var c in Model.Where(x => x.MenuParentID == p.MenuID))
+                                    @foreach (var c in Model.Where(x => x.MenuParentID == p.MenuID && x.IsVisible(Model.Client)))
                                     {
                                         <li>
-                                            <a href="@c.MenuURL" target="@Model.GetTarget()">@c.MenuText</a>
+                                            <a href="@c.MenuURL" target="@Model.GetTarget(c)">@c.MenuText</a>
                                         </li>
                                     }
                                 </ul>

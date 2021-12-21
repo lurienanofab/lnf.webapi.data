@@ -1,6 +1,5 @@
-﻿using LNF.Models.Data;
-using LNF.Repository;
-using LNF.Repository.Data;
+﻿using LNF.Data;
+using LNF.Impl.Repository.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +10,10 @@ namespace LNF.WebApi.Data.Controllers
     /// <summary>
     /// Resource for working with Account and AccountInfo items
     /// </summary>
-    public class AccountController : ApiController
+    public class AccountController : ApiControllerBase
     {
+        public AccountController(IProvider provider) : base(provider) { }
+
         /// <summary>
         /// Gets an unfiltered list of accounts
         /// </summary>
@@ -25,7 +26,7 @@ namespace LNF.WebApi.Data.Controllers
             if (limit > 100)
                 throw new ArgumentOutOfRangeException("The parameter 'limit' must not be greater than 100.");
 
-            var query = DA.Current.Query<AccountInfo>().Skip(skip).Take(limit).OrderBy(x => x.AccountName);
+            var query = DataSession.Query<AccountInfo>().Skip(skip).Take(limit).OrderBy(x => x.AccountName);
 
             return query.ToList();
         }
@@ -42,7 +43,7 @@ namespace LNF.WebApi.Data.Controllers
             if (limit > 100)
                 throw new ArgumentOutOfRangeException("The parameter 'limit' must not be greater than 100.");
 
-            var query = DA.Current.Query<AccountInfo>().Where(x => x.AccountActive).Skip(skip).Take(limit).OrderBy(x => x.AccountName);
+            var query = DataSession.Query<AccountInfo>().Where(x => x.AccountActive).Skip(skip).Take(limit).OrderBy(x => x.AccountName);
 
             return query;
         }
@@ -65,19 +66,19 @@ namespace LNF.WebApi.Data.Controllers
 
             if (clientId == 0)
             {
-                var query = DA.Current.Query<ActiveLogAccount>()
+                var query = DataSession.Query<ActiveLogAccount>()
                     .Where(x => x.EnableDate < ed && (x.DisableDate == null || x.DisableDate > sd));
 
-                var join = query.Join(DA.Current.Query<AccountInfo>(), o => o.AccountID, i => i.AccountID, (outer, inner) => inner);
+                var join = query.Join(DataSession.Query<AccountInfo>(), o => o.AccountID, i => i.AccountID, (outer, inner) => inner);
 
                 return join.OrderBy(x => x.AccountName).Skip(skip).Take(limit).ToList();
             }
             else
             {
-                var query = DA.Current.Query<ActiveLogClientAccount>()
+                var query = DataSession.Query<ActiveLogClientAccount>()
                     .Where(x => x.ClientID == clientId && (x.EnableDate < ed && (x.DisableDate == null || x.DisableDate > sd)));
 
-                var join = query.Join(DA.Current.Query<AccountInfo>(), o => o.AccountID, i => i.AccountID, (outer, inner) => inner);
+                var join = query.Join(DataSession.Query<AccountInfo>(), o => o.AccountID, i => i.AccountID, (outer, inner) => inner);
 
                 return join.OrderBy(x => x.AccountName).Skip(skip).Take(limit).ToList();
             }
@@ -89,9 +90,9 @@ namespace LNF.WebApi.Data.Controllers
         /// <param name="accountId">The id value</param>
         /// <returns>An AccountInfo item</returns>
         [Route("account/{accountId}")]
-        public AccountItem GetByAccountID(int accountId)
+        public IAccount GetByAccountID(int accountId)
         {
-            return CreateAccountItems(DA.Current.Query<AccountInfo>().Where(x => x.AccountID == accountId)).FirstOrDefault();
+            return CreateAccountItems(DataSession.Query<AccountInfo>().Where(x => x.AccountID == accountId)).FirstOrDefault();
         }
 
         /// <summary>
@@ -102,37 +103,38 @@ namespace LNF.WebApi.Data.Controllers
         [Route("account/shortcode/{shortcode}")]
         public AccountInfo GetByShortCode(string shortcode)
         {
-            return DA.Current.Query<AccountInfo>().FirstOrDefault(x => x.ShortCode.Trim() == shortcode.Trim());
+            return DataSession.Query<AccountInfo>().FirstOrDefault(x => x.ShortCode.Trim() == shortcode.Trim());
         }
 
-        private IEnumerable<AccountItem> CreateAccountItems(IQueryable<AccountInfo> query)
+        private IEnumerable<IAccount> CreateAccountItems(IQueryable<AccountInfo> query)
         {
-            return query.ToList().Select(x => new AccountItem
-            {
-                AccountID = x.AccountID,
-                OrgID = x.OrgID,
-                OrgName = x.OrgName,
-                AccountTypeID = x.AccountTypeID,
-                AccountTypeName = x.AccountTypeName,
-                AccountName = x.AccountName,
-                AccountNumber = x.AccountNumber,
-                ShortCode = x.ShortCode,
-                FundingSourceID = x.FundingSourceID,
-                FundingSourceName = x.FundingSourceName,
-                TechnicalFieldID = x.TechnicalFieldID,
-                TechnicalFieldName = x.TechnicalFieldName,
-                SpecialTopicID = x.SpecialTopicID,
-                SpecialTopicName = x.SpecialTopicName,
-                BillAddressID = x.BillAddressID,
-                ShipAddressID = x.ShipAddressID,
-                InvoiceNumber = x.InvoiceNumber,
-                InvoiceLine1 = x.InvoiceLine1,
-                InvoiceLine2 = x.InvoiceLine2,
-                PoEndDate = x.PoEndDate,
-                PoInitialFunds = x.PoInitialFunds,
-                PoRemainingFunds = x.PoRemainingFunds,
-                AccountActive = x.AccountActive
-            }).ToList();
+            return query.ToList();
+            //return query.ToList().Select(x => new AccountItem
+            //{
+            //    AccountID = x.AccountID,
+            //    OrgID = x.OrgID,
+            //    OrgName = x.OrgName,
+            //    AccountTypeID = x.AccountTypeID,
+            //    AccountTypeName = x.AccountTypeName,
+            //    AccountName = x.AccountName,
+            //    AccountNumber = x.AccountNumber,
+            //    ShortCode = x.ShortCode,
+            //    FundingSourceID = x.FundingSourceID,
+            //    FundingSourceName = x.FundingSourceName,
+            //    TechnicalFieldID = x.TechnicalFieldID,
+            //    TechnicalFieldName = x.TechnicalFieldName,
+            //    SpecialTopicID = x.SpecialTopicID,
+            //    SpecialTopicName = x.SpecialTopicName,
+            //    BillAddressID = x.BillAddressID,
+            //    ShipAddressID = x.ShipAddressID,
+            //    InvoiceNumber = x.InvoiceNumber,
+            //    InvoiceLine1 = x.InvoiceLine1,
+            //    InvoiceLine2 = x.InvoiceLine2,
+            //    PoEndDate = x.PoEndDate,
+            //    PoInitialFunds = x.PoInitialFunds,
+            //    PoRemainingFunds = x.PoRemainingFunds,
+            //    AccountActive = x.AccountActive
+            //}).ToList();
         }
     }
 }

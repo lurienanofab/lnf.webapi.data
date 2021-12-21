@@ -1,13 +1,13 @@
-﻿using MongoDB.Bson;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
+using LNF.Mongo;
 
 namespace LNF.WebApi.Data.Models
 {
     public class Alert
     {
         [JsonProperty("id")]
-        public ObjectId Id { get; set; }
+        public string Id { get; set; }
 
         [JsonProperty("type")]
         public string Type { get; set; }

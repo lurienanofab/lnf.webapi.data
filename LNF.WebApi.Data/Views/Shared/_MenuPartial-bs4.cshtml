@@ -1,0 +1,58 @@
+﻿@using LNF;
+
+@model  SiteMenu
+@{
+    var parents = Model.Where(x => x.MenuParentID == 0 && x.IsVisible(Model.Client) && x.Active).ToList();
+}
+
+<!-- Fixed navbar -->
+<nav class="navbar sticky-top navbar-expand-lg navbar-light bg-light site-menu-bs4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <img src="//ssel-apps.eecs.umich.edu/static/images/lnfbanner.jpg" alt="">
+        </a>
+
+        <div class="navbar-brand navbar-text text-left d-block d-lg-none current-user" data-time-url="//ssel-sched.eecs.umich.edu/time.aspx">
+            <div>@Model.Client.DisplayName</div>
+            <div class="clock" data-format="h:mm:ss A, MMM D"></div>
+        </div>
+
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                @foreach (var p in parents)
+                {
+                    var children = Model.Where(x => x.MenuParentID == p.MenuID && x.IsVisible(Model.Client) && x.Active).ToList();
+                    if (children.Count > 0)
+                    {
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                @p.MenuText
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                @foreach (var c in children)
+                                {
+                                    <a class="dropdown-item" href="@c.MenuURL">@c.MenuText</a>
+                                }
+                            </div>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="@p.MenuURL">@p.MenuText</a>
+                        </li>
+                    }
+                }
+            </ul>
+        </div>
+
+        <div class="navbar-text text-right d-none d-lg-block current-user" data-time-url="//ssel-sched.eecs.umich.edu/time.aspx">
+            <div>Current User: @Model.Client.DisplayName</div>
+            <div class="clock" data-format="hh:mm:ss A on dddd, MMM DD"></div>
+        </div>
+    </div>
+</nav>

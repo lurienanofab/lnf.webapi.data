@@ -1,7 +1,12 @@
-﻿using LNF.Impl.Context;
-using LNF.Impl.DependencyInjection.Web;
+﻿using LNF.Impl.DependencyInjection;
+using LNF.Web;
 using Microsoft.Owin;
 using Owin;
+using SimpleInjector.Integration.WebApi;
+using System.Linq;
+using System.Reflection;
+using System.Web.Compilation;
+using System.Web.Http;
 using System.Web.Mvc;
 using System.Web.Routing;
 
@@ -14,13 +19,25 @@ namespace LNF.WebApi.Data
     /// </summary>
     public class Startup : ApiOwinStartup
     {
-        public override void Configuration(IAppBuilder app)
-        {
-            var ctx = new WebContext(new WebContextFactory());
-            var ioc = new IOC(ctx);
-            ServiceProvider.Current = ioc.Resolver.GetInstance<IProvider>();
+        public static WebApp WebApp { get; private set; }
 
-            base.Configuration(app);
+        public void Configuration(IAppBuilder app)
+        {
+            WebApp = new WebApp();
+
+            var wcc = new WebContainerConfiguration(WebApp.Context);
+            wcc.RegisterAllTypes();
+
+            // setup web dependency injection
+            Assembly[] assemblies = BuildManager.GetReferencedAssemblies().Cast<Assembly>().ToArray();
+            WebApp.BootstrapMvc(assemblies);
+
+            app.UseDataAccess(WebApp.Context);
+
+            var config = CreateConfiguration();
+            config.DependencyResolver = new SimpleInjectorWebApiDependencyResolver(WebApp.GetContainer());
+
+            app.UseWebApi(config);
 
             AreaRegistration.RegisterAllAreas();
             RouteConfig.RegisterRoutes(RouteTable.Routes);

@@ -1,16 +1,21 @@
-﻿using LNF.Models.Data;
+﻿using LNF.Data;
 using System.Web.Mvc;
 
 namespace LNF.WebApi.Data.Controllers
 {
     public class AjaxController : Controller
     {
-        [HttpGet, Web.Mvc.BasicAuthentication, Route("ajax/menu")]
-        public ActionResult Menu(int clientId = 0, string username = null, string target = null)
+        [HttpGet, Web.Mvc.BasicAuthentication, Route("ajax/menu/{version?}")]
+        public ActionResult Menu(string version = "bs3", int clientId = 0, string username = null, string target = null, bool https = false, string option = null)
         {
             var client = GetClient(clientId, username);
-            var menu = new SiteMenu(client, target);
-            return PartialView("_MenuPartial", menu);
+            var loginUrl = ServiceProvider.Current.LoginUrl();
+            var menu = new SiteMenu(client, target, loginUrl, https, option);
+
+            if (string.IsNullOrEmpty(version))
+                version = "bs3";
+
+            return PartialView($"_MenuPartial-{version}", menu);
         }
 
         private IClient GetClient(int clientId, string username)
