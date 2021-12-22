@@ -98,7 +98,9 @@ namespace LNF.WebApi.Data.Controllers
         [HttpGet, Route("drybox/assignment/current")]
         public List<DryBoxAssignmentInfo> GetCurrentDryBoxAssignments()
         {
-            return Provider.Data.DryBox.GetCurrentDryBoxAssignments().ToList();
+            var result = Provider.Data.DryBox.GetCurrentDryBoxAssignments().ToList();
+
+            return result;
         }
 
         [HttpGet, Route("drybox/assignment/{dryBoxAssignmentId}/cancel-request")]

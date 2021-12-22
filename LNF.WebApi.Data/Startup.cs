@@ -39,6 +39,7 @@ namespace LNF.WebApi.Data
 
             app.UseWebApi(config);
 
+            // setup MVC stuff, used for generating the Menu
             AreaRegistration.RegisterAllAreas();
             RouteConfig.RegisterRoutes(RouteTable.Routes);
         }
