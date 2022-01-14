@@ -132,7 +132,6 @@ namespace LNF.WebApi.Data.Controllers
             DataSession.Insert(client);
 
             Provider.Data.ActiveLog.Enable(client);
-            client.ResetPassword();
 
             var c = client.CreateModel<IClient>();
             var result = CreateClientItem(c);
