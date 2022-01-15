@@ -228,7 +228,7 @@
     </VisualStudio>
   </ProjectExtensions>
   <PropertyGroup>
-    <PostBuildEvent>COPY /Y "..\..\..\xmldocs\*.xml" .\ &gt;&gt; C:\copy-xmldocs.log</PostBuildEvent>
+    <PostBuildEvent>COPY /Y "..\..\..\xmldocs\*.xml" .\ &gt;&gt; g:\logs\copy-xmldocs.log</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>
