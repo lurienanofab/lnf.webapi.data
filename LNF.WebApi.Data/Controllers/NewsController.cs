@@ -57,6 +57,7 @@ namespace LNF.WebApi.Data.Controllers
 
             var result = new DisplayData
             {
+                ServerTime = DateTime.Now,
                 Areas = GetDisplayAreas(),
                 News = news
             };
@@ -138,6 +139,7 @@ namespace LNF.WebApi.Data.Controllers
 
     public class DisplayData
     {
+        public DateTime ServerTime { get; set; }
         public IEnumerable<DisplayArea> Areas { get; set; }
         public IEnumerable<NewsListItem> News { get; set; }
     }
