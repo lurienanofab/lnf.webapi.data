@@ -50,7 +50,7 @@ namespace LNF.WebApi.Data.Controllers
                 return ImageResult(item.NewsImage, item.NewsImageContentType);
         }
 
-        [HttpGet, Route("news/display")]
+        [AllowAnonymous, HttpGet, Route("news/display")]
         public DisplayData GetDisplayData()
         {
             var news = GetActive().OrderBy(x => x.IsTicker).ThenBy(x => x.NewsID).ToList();
