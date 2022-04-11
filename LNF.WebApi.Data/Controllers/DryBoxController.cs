@@ -41,10 +41,10 @@ namespace LNF.WebApi.Data.Controllers
             return Provider.Data.DryBox.Reject(dryBoxAssignmentId);
         }
 
-        [HttpGet, Route("drybox/assignment/{dryBoxAssignmentId}/approve")]
-        public DryBoxAssignmentInfo ApproveDryBoxAssignment([FromUri] int dryBoxAssignmentId, int modifiedByClientId)
+        [HttpPut, Route("drybox/assignment/{dryBoxAssignmentId}/approve")]
+        public DryBoxAssignmentInfo ApproveDryBoxAssignment([FromUri] int dryBoxAssignmentId, [FromBody] DryBoxAssignmentUpdate update)
         {
-            return Provider.Data.DryBox.Approve(dryBoxAssignmentId, modifiedByClientId);
+            return Provider.Data.DryBox.Approve(dryBoxAssignmentId, update);
         }
 
         [HttpPut, Route("drybox/assignment/{dryBoxAssignmentId}")]
